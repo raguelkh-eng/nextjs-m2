@@ -16,6 +16,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -96,24 +97,46 @@ const MAX_STARS = 5;
 
 interface ProductDetail1Props {
   className?: string;
-  id: string;
+  id?: string;
 }
 
 const ProductDetailComponent = ({ className, id }: ProductDetail1Props) => {
   //  all logic will display here
   const [singleProduct, setSingleProduct] = useState<ProductInfer>();
-  useEffect(()=> {
-     
-    async function fetchSingleProductByID(){
-       const response = await fetch(`https://fakestoreapi.com/products/${id}`);
-       const singleProduct = await response.json();
-       setSingleProduct(singleProduct);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    async function fetchSingleProductByID() {
+      if (!id) {
+        setError("Product ID is missing");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await fetch(
+          `https://fakestoreapi.com/products/${id}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch product: ${response.status}`);
+        }
+
+        const singleProduct = await response.json();
+        setSingleProduct(singleProduct);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch product"
+        );
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchSingleProductByID();
-
-
-  },[id])
+  }, [id]);
 
   // const salePrice = singleProduct?.price - singleProduct?.price * 0.2; 
 
@@ -195,7 +218,31 @@ const ProductDetailComponent = ({ className, id }: ProductDetail1Props) => {
   return (
     <section className={cn("py-32", className)}>
       <div className="container">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
+        {error && (
+          <div className="text-center py-12">
+            <p className="text-destructive mb-2">Failed to fetch product</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        )}
+
+        {isLoading && !error && (
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
+            <Skeleton className="aspect-square w-full rounded-lg lg:aspect-auto lg:h-full" />
+            <div className="space-y-6">
+              <Skeleton className="h-12 w-3/4" />
+              <Skeleton className="h-6 w-1/2" />
+              <Skeleton className="h-8 w-1/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </div>
+        )}
+
+        {!isLoading && !error && singleProduct && (
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
           <div>
             <ProductImages images={PRODUCT_DETAILS.images} />
           </div>
@@ -263,11 +310,11 @@ const ProductDetailComponent = ({ className, id }: ProductDetail1Props) => {
                 {
                   label: "Fit",
                   value: "Regular Fit",
-                },
-              ]}
+                },              ]}
             />
           </div>
         </div>
+        )}
       </div>
     </section>
   );
